@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Angebots-Agenten</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeede9;
+    --text: #1a1a18;
+    --text-secondary: #6b6b67;
+    --text-tertiary: #9e9e99;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --blue: #378ADD;
+    --blue-bg: #E6F1FB;
+    --blue-text: #185FA5;
+    --teal: #1D9E75;
+    --teal-bg: #E1F5EE;
+    --teal-text: #0F6E56;
+    --purple-bg: #EEEDFE;
+    --purple-text: #534AB7;
+    --amber-bg: #FAEEDA;
+    --amber-text: #854F0B;
+    --red: #E24B4A;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg-secondary: #252523;
+      --bg-tertiary: #2e2e2b;
+      --text: #f0efeb;
+      --text-secondary: #a0a09a;
+      --text-tertiary: #6b6b67;
+      --border: rgba(255,255,255,0.1);
+      --border-md: rgba(255,255,255,0.2);
+      --blue-bg: #0c2a47;
+      --blue-text: #85B7EB;
+      --teal-bg: #04201a;
+      --teal-text: #5DCAA5;
+      --purple-bg: #1e1c40;
+      --purple-text: #AFA9EC;
+      --amber-bg: #2e1f05;
+      --amber-text: #FAC775;
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg-tertiary);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; }
+
+  .header { margin-bottom: 1.5rem; }
+  .header h1 { font-size: 22px; font-weight: 600; color: var(--text); }
+  .header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+  .card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-title {
+    font-size: 12px; font-weight: 500;
+    color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 0.875rem;
+  }
+
+  /* API Key */
+  .apikey-row { display: flex; gap: 8px; align-items: center; }
+  .apikey-row input {
+    flex: 1; height: 36px; padding: 0 10px;
+    border: 0.5px solid var(--border-md); border-radius: var(--radius-md);
+    background: var(--bg-secondary); color: var(--text);
+    font-family: var(--font); font-size: 13px;
+  }
+  .apikey-row input:focus { outline: none; border-color: var(--blue); }
+  .btn-toggle {
+    height: 36px; padding: 0 12px;
+    border: 0.5px solid var(--border-md); border-radius: var(--radius-md);
+    background: var(--bg-secondary); color: var(--text-secondary);
+    cursor: pointer; font-size: 13px; font-family: var(--font);
+  }
+  .apikey-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; }
+  .apikey-hint a { color: var(--blue-text); text-decoration: none; }
+
+  /* Task input */
+  .task-row { display: flex; gap: 8px; align-items: flex-start; }
+  .task-row textarea {
+    flex: 1; min-height: 80px; resize: vertical;
+    padding: 8px 10px; border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-md);
+    background: var(--bg-secondary); color: var(--text);
+    font-family: var(--font); font-size: 14px; line-height: 1.6;
+  }
+  .task-row textarea:focus { outline: none; border-color: var(--blue); }
+
+  .btn-primary {
+    height: 38px; padding: 0 18px;
+    background: var(--text); color: var(--bg);
+    border: none; border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; font-family: var(--font);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-primary:disabled { opacity: 0.38; cursor: not-allowed; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.82; }
+
+  .progress-wrap { height: 3px; background: var(--bg-secondary); border-radius: 2px; margin-top: 10px; }
+  .progress-bar { height: 3px; border-radius: 2px; background: var(--blue); width: 0%; transition: width 0.5s ease; }
+  .log-text { font-size: 11px; color: var(--text-tertiary); margin-top: 5px; min-height: 15px; }
+
+  /* Agents grid */
+  .agents-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+  .agent-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    transition: border-color 0.25s;
+  }
+  .agent-card.active  { border-color: var(--blue); }
+  .agent-card.done    { border-color: var(--teal); }
+  .agent-card.error   { border-color: var(--red); }
+
+  .agent-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .agent-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 15px;
+  }
+  .icon-blue   { background: var(--blue-bg);   color: var(--blue-text); }
+  .icon-teal   { background: var(--teal-bg);   color: var(--teal-text); }
+  .icon-purple { background: var(--purple-bg); color: var(--purple-text); }
+  .icon-amber  { background: var(--amber-bg);  color: var(--amber-text); }
+
+  .agent-meta { flex: 1; min-width: 0; }
+  .agent-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .agent-role { font-size: 11px; color: var(--text-secondary); }
+
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--border-md); flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.active { background: var(--blue); animation: pulse 1.2s infinite; }
+  .status-dot.done   { background: var(--teal); animation: none; }
+  .status-dot.error  { background: var(--red);  animation: none; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .agent-task { font-size: 11px; color: var(--text-secondary); line-height: 1.5; min-height: 28px; }
+
+  .dep-badges { margin-top: 6px; }
+  .dep-badge {
+    display: inline-block; font-size: 10px;
+    background: var(--bg-secondary); color: var(--text-tertiary);
+    border: 0.5px solid var(--border); border-radius: 4px;
+    padding: 1px 5px; margin-right: 3px; margin-top: 2px;
+  }
+
+  .agent-output {
+    display: none; margin-top: 8px;
+    background: var(--bg-secondary); border-radius: var(--radius-md);
+    padding: 8px 10px; font-size: 11px; color: var(--text);
+    line-height: 1.65; max-height: 130px; overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  .agent-output.visible { display: block; }
+
+  /* Result */
+  .result-card { display: none; }
+  .result-card.visible { display: block; }
+  .result-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .result-header h2 { font-size: 15px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .result-header .check { color: var(--teal); }
+  .btn-copy {
+    height: 32px; padding: 0 12px;
+    border: 0.5px solid var(--border-md); border-radius: var(--radius-md);
+    background: var(--bg-secondary); color: var(--text-secondary);
+    font-size: 12px; cursor: pointer; font-family: var(--font);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .btn-copy:hover { background: var(--bg-tertiary); }
+  .result-body {
+    font-size: 13px; color: var(--text); line-height: 1.85;
+    white-space: pre-wrap;
+    background: var(--bg-secondary); border-radius: var(--radius-md);
+    padding: 1rem;
+  }
+
+  /* Fullwidth agent */
+  .agent-full { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Angebots-Agenten</h1>
+    <p>Vier spezialisierte Agenten arbeiten zusammen, um dein Angebot zu erstellen.</p>
+  </div>
+
+  <!-- API Key Info -->
+  <div class="card" style="border-color: var(--teal); background: var(--teal-bg);">
+    <div style="font-size:13px; color: var(--teal-text); display:flex; align-items:center; gap:8px;">
+      <span>✓</span>
+      <span>API-Key ist sicher in Azure App Service Configuration hinterlegt.</span>
+    </div>
+  </div>
+
+  <!-- Task input -->
+  <div class="card">
+    <div class="card-title">Projektbeschreibung</div>
+    <div class="task-row">
+      <textarea id="task-input" placeholder="Beispiel: Kunde XY benötigt ein Mediensystem für einen Konferenzraum mit 50 Personen. Budget ca. 25.000 €. Gewünschte Lieferung in 8 Wochen."></textarea>
+      <button class="btn-primary" id="start-btn" onclick="startPipeline()">
+        ▶ Starten
+      </button>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="log-text" id="log-text"></div>
+  </div>
+
+  <!-- Agents -->
+  <div class="card">
+    <div class="card-title">Agenten-Pipeline</div>
+    <div class="agents-grid">
+
+      <div class="agent-card" id="card-0">
+        <div class="agent-header">
+          <div class="agent-icon icon-blue">🔍</div>
+          <div class="agent-meta">
+            <div class="agent-name">Kundenanalyse</div>
+            <div class="agent-role">Daten &amp; Anforderungen</div>
+          </div>
+          <div class="status-dot" id="dot-0"></div>
+        </div>
+        <div class="agent-task" id="task-0">Wartet auf Eingabe…</div>
+        <div class="agent-output" id="out-0"></div>
+      </div>
+
+      <div class="agent-card" id="card-1">
+        <div class="agent-header">
+          <div class="agent-icon icon-purple">🖥</div>
+          <div class="agent-meta">
+            <div class="agent-name">Systemkonzept</div>
+            <div class="agent-role">Medientechnik &amp; Lösung</div>
+          </div>
+          <div class="status-dot" id="dot-1"></div>
+        </div>
+        <div class="agent-task" id="task-1">Wartet auf Kundenanalyse…</div>
+        <div class="dep-badges"><span class="dep-badge">→ Kundenanalyse</span></div>
+        <div class="agent-output" id="out-1"></div>
+      </div>
+
+      <div class="agent-card" id="card-2">
+        <div class="agent-header">
+          <div class="agent-icon icon-amber">🧮</div>
+          <div class="agent-meta">
+            <div class="agent-name">Preiskalkulation</div>
+            <div class="agent-role">Kosten &amp; Positionen</div>
+          </div>
+          <div class="status-dot" id="dot-2"></div>
+        </div>
+        <div class="agent-task" id="task-2">Wartet auf Systemkonzept…</div>
+        <div class="dep-badges"><span class="dep-badge">→ Systemkonzept</span></div>
+        <div class="agent-output" id="out-2"></div>
+      </div>
+
+      <div class="agent-card agent-full" id="card-3">
+        <div class="agent-header">
+          <div class="agent-icon icon-teal">📄</div>
+          <div class="agent-meta">
+            <div class="agent-name">Angebotsdokument</div>
+            <div class="agent-role">Finales Angebot</div>
+          </div>
+          <div class="status-dot" id="dot-3"></div>
+        </div>
+        <div class="agent-task" id="task-3">Wartet auf alle Agenten…</div>
+        <div class="dep-badges">
+          <span class="dep-badge">→ Kundenanalyse</span>
+          <span class="dep-badge">→ Systemkonzept</span>
+          <span class="dep-badge">→ Preiskalkulation</span>
+        </div>
+        <div class="agent-output" id="out-3"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="card result-card" id="result-card">
+    <div class="result-header">
+      <h2><span class="check">✓</span> Angebot erstellt</h2>
+      <button class="btn-copy" onclick="copyResult()">📋 Kopieren</button>
+    </div>
+    <div class="result-body" id="result-body"></div>
+  </div>
+
+</div>
+
+<script>
+const AGENTS = [
+  {
+    name: "Kundenanalyse",
+    system: `Du bist ein erfahrener Vertriebsanalyst. Analysiere die Kundenanfrage und extrahiere strukturiert:
+1. Kundenprofil (Name/Firma falls angegeben, Branche, Größe)
+2. Kernanforderungen (Was wird benötigt?)
+3. Budget (falls angegeben)
+4. Zeitrahmen
+5. Besondere Wünsche oder Einschränkungen
+Antworte kompakt in 5-8 Sätzen auf Deutsch.`,
+    taskLabel: "Analysiere Kundenanforderungen…"
+  },
+  {
+    name: "Systemkonzept",
+    system: `Du bist ein medientechnischer Systemarchitekt. Basierend auf der Kundenanalyse entwickle ein passendes medientechnisches Systemkonzept:
+1. Empfohlene Hauptkomponenten (z.B. Display, Audio, Steuerung, Netzwerk)
+2. Technische Spezifikationen (kurz)
+3. Besondere technische Hinweise oder Empfehlungen
+Antworte strukturiert in 5-8 Sätzen auf Deutsch, konkret und technisch präzise.`,
+    taskLabel: "Entwickle Systemarchitektur…"
+  },
+  {
+    name: "Preiskalkulation",
+    system: `Du bist ein Kalkulator für AV- und Medientechnikprojekte. Erstelle basierend auf Systemkonzept und Kundenanforderungen eine realistische Preisschätzung:
+- Liste 4-6 Hauptpositionen mit realistischen Preisschätzungen (in €)
+- Füge Montage/Installation hinzu (ca. 15-20% der Materialkosten)
+- Nenne einen Gesamtbetrag (netto)
+Antworte als kompakte Positionsliste auf Deutsch.`,
+    taskLabel: "Kalkuliere Preise und Positionen…"
+  },
+  {
+    name: "Angebotsdokument",
+    system: `Du bist ein professioneller Angebotsverfasser. Erstelle ein vollständiges, professionelles Angebot auf Deutsch mit:
+1. Kurze Einleitung / Anrede
+2. Projektzusammenfassung
+3. Leistungsumfang (aus dem Systemkonzept)
+4. Kostenaufstellung (aus der Kalkulation)
+5. Projektablauf / Zeitplan
+6. Zahlungsbedingungen (Standard: 30% Anzahlung, 70% bei Abnahme)
+7. Abschluss / Grußformel
+Halte es professionell aber lesbar. Max. 400 Wörter.`,
+    taskLabel: "Verfasse finales Angebotsdokument…"
+  }
+];
+
+let running = false;
+
+function setAgent(i, status, taskText) {
+  document.getElementById('card-' + i).className = 'agent-card' + (i === 3 ? ' agent-full' : '') + (status !== 'waiting' ? ' ' + status : '');
+  const dot = document.getElementById('dot-' + i);
+  dot.className = 'status-dot' + (status !== 'waiting' ? ' ' + status : '');
+  if (taskText) document.getElementById('task-' + i).textContent = taskText;
+}
+
+function showOut(i, text) {
+  const el = document.getElementById('out-' + i);
+  el.textContent = text;
+  el.classList.add('visible');
+}
+
+function setProgress(pct, log) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('log-text').textContent = log || '';
+}
+
+async function callAgent(index, userMsg) {
+  const agent = AGENTS[index];
+  const key = document.getElementById('api-key').value.trim();
+  setAgent(index, 'active', agent.taskLabel);
+  setProgress(10 + index * 22, agent.name + ' arbeitet…');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: agent.system,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'HTTP ' + res.status);
+    }
+
+    const data = await res.json();
+    const text = data.content?.map(b => b.text || '').join('') || '';
+    setAgent(index, 'done', agent.name + ' abgeschlossen ✓');
+    showOut(index, text);
+    return text;
+  } catch(e) {
+    setAgent(index, 'error', 'Fehler: ' + e.message);
+    showOut(index, 'Fehler: ' + e.message);
+    return null;
+  }
+}
+
+async function startPipeline() {
+  if (running) return;
+  const task = document.getElementById('task-input').value.trim();
+  if (!task) { alert('Bitte eine Projektbeschreibung eingeben.'); return; }
+
+  running = true;
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('result-card').className = 'card result-card';
+
+  for (let i = 0; i < 4; i++) {
+    setAgent(i, 'waiting', AGENTS[i].name + ' – bereit');
+    const o = document.getElementById('out-' + i);
+    o.classList.remove('visible');
+    o.textContent = '';
+  }
+
+  setProgress(5, 'Pipeline wird gestartet…');
+
+  const r0 = await callAgent(0, `Kundenanfrage:\n${task}`);
+  if (!r0) { running = false; document.getElementById('start-btn').disabled = false; return; }
+
+  const r1 = await callAgent(1, `Kundenanfrage:\n${task}\n\nKundenanalyse:\n${r0}`);
+  if (!r1) { running = false; document.getElementById('start-btn').disabled = false; return; }
+
+  const r2 = await callAgent(2, `Kundenanfrage:\n${task}\n\nKundenanalyse:\n${r0}\n\nSystemkonzept:\n${r1}`);
+  if (!r2) { running = false; document.getElementById('start-btn').disabled = false; return; }
+
+  const r3 = await callAgent(3, `Kundenanfrage:\n${task}\n\nKundenanalyse:\n${r0}\n\nSystemkonzept:\n${r1}\n\nPreiskalkulation:\n${r2}`);
+  if (!r3) { running = false; document.getElementById('start-btn').disabled = false; return; }
+
+  setProgress(100, 'Alle Agenten abgeschlossen.');
+  document.getElementById('result-body').textContent = r3;
+  document.getElementById('result-card').className = 'card result-card visible';
+
+  running = false;
+  document.getElementById('start-btn').disabled = false;
+}
+
+function copyResult() {
+  const text = document.getElementById('result-body').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = '✓ Kopiert';
+    setTimeout(() => btn.textContent = '📋 Kopieren', 2000);
+  });
+}
+</script>
+</body>
+</html>
